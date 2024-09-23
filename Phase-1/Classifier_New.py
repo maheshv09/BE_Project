@@ -50,6 +50,15 @@ def get_mime_type(file_path):
     mime_type = mime.from_file(file_path)
     return mime_type
 
+
+def get_mime_type_fast(file_path, read_size=1024):
+    with open(file_path, 'rb') as file:
+        file_start = file.read(read_size)
+    mime = magic.Magic(mime=True)
+    mime_type = mime.from_buffer(file_start)
+    return mime_type
+
+
 def predict_new_extension(extension, mime_type):
     ext_encoded = le_ext.transform([extension])
     mime_encoded = le_mime.transform([mime_type])
@@ -59,8 +68,8 @@ def predict_new_extension(extension, mime_type):
     
     print(f"Predicted Category for {extension}: {category_predicted[0]}")
 
-new_extension = '.py'
-new_mime_type = get_mime_type("F:\mahesh\BE Project\Phase-1\Classifier.py")
+new_extension = '.mp4'
+new_mime_type = get_mime_type_fast("F:\mahesh\BE Project\Phase-1\Classifier.py")
 print("New mime:" + new_mime_type)                                                   
 
 predict_new_extension(new_extension, new_mime_type)
