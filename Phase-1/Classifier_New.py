@@ -8,7 +8,7 @@ import mimetypes
 import magic
 import pickle
 
-df = pd.read_csv('merged_file_new.csv')
+df = pd.read_csv('merged_file.csv')
 # df['MIME Type'] = df['MIME Type'].fillna('unknown')
 
 le_ext = LabelEncoder()
@@ -77,3 +77,12 @@ predict_new_extension(new_extension, new_mime_type)
 
 with open('decision_tree_model.pkl', 'wb') as file:
     pickle.dump(decision_tree, file)
+
+with open('le_extension.pkl', 'wb') as ext_file:
+    pickle.dump(le_ext, ext_file)
+
+with open('le_mime.pkl', 'wb') as mime_file:
+    pickle.dump(le_mime, mime_file)
+
+with open('le_category.pkl', 'wb') as category_file:
+    pickle.dump(le_category, category_file)
