@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Button, Typography, Box, CircularProgress, Snackbar, Card, CardContent, Grid, Alert } from '@mui/material';
-import FolderOpenIcon from '@mui/icons-material/FolderOpen';
-import MuiAlert from '@mui/material/Alert';
+import { FaFolder } from "react-icons/fa";
+import { FaFile } from "react-icons/fa";
+import { CircularProgress } from '@mui/material';  // Retain CircularProgress if needed, or create a custom one
 
 const FileClassifier = () => {
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -10,14 +10,15 @@ const FileClassifier = () => {
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [directory, setDirectory] = useState(null);
+
   const handleDirectoryChange = (event) => {
     const files = event.target.files;
-    const fileArray = Array.from(files); // Convert FileList to an array
+    const fileArray = Array.from(files);  // Convert FileList to an array
     setSelectedFiles(fileArray);
     if (files.length > 0) {
-        const path = files[0].webkitRelativePath.split('/')[0];  // Get directory name
-        setDirectory(path);  // Set the directory name
-      }
+      const path = files[0].webkitRelativePath.split('/')[0];  // Get directory name
+      setDirectory(path);  // Set the directory name
+    }
     console.log('Selected files:', fileArray);
   };
 
@@ -49,7 +50,7 @@ const FileClassifier = () => {
       const data = await response.json();
       console.log('Classification Result:', data);
       setClassifiedFiles(data);  // Store API response (classified categories and files)
-      setSnackbarMessage('Files classified successfully!');
+      setSnackbarMessage('Files classified successfully !');
       setOpenSnackbar(true);
     } catch (error) {
       console.error('Error classifying files:', error);
@@ -65,88 +66,91 @@ const FileClassifier = () => {
   };
 
   return (
-    <Box sx={{ textAlign: 'center', mt: 5, p: 2 }}>
-  <Typography variant="h4" gutterBottom>
-    File Category Classifier
-  </Typography>
+    <div className=" mt-10 p-4">
+      <h1 className="text-3xl text-center font-bold mb-4">File Category Classifier</h1>
 
-  {/* Directory and Classify buttons stacked vertically */}
-  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-    {/* Directory Select Button */}
-    <Button
-      variant="contained"
-      component="label"
-      startIcon={<FolderOpenIcon />}
-      sx={{ width: 'fit-content', mb: 2 }}  // Ensure button has margin below it
-    >
-      Select Directory
-      <input
-        type="file"
-        webkitdirectory="true"
-        directory="true"
-        multiple
-        hidden
-        onChange={handleDirectoryChange}
-      />
-    </Button>
+      {/* Directory and Classify buttons stacked vertically */}
+      <div className="flex flex-col items-center gap-4 border py-10 w-1/2 m-auto">
+        {/* Directory Select Button */}
+        <button
+          className="bg-blue-500 text-white px-4 py-2 rounded flex items-center gap-2"
+          type="button"
+          onClick={() => document.getElementById('file-input').click()}
+        >
+          <FaFolder className="h-6 w-6" />
+          Select Directory
+        </button>
+        <input
+          id="file-input"
+          type="file"
+          webkitdirectory="true"
+          directory="true"
+          multiple
+          hidden
+          onChange={handleDirectoryChange}
+        />
 
-    {/* Display the selected directory */}
-    {directory && (
-      <Typography variant="subtitle1" sx={{ mt: 1 }}>
-        Selected Directory: {directory}
-      </Typography>
-    )}
+        {/* Display the selected directory */}
+        {directory && (
+          <p className="mt-2 text-lg">
+            Selected Directory: <span className="font-semibold">{directory}</span>
+          </p>
+        )}
 
-    {/* Classify Button - Disabled until directory is selected */}
-    <Button
-      variant="contained"
-      color="primary"
-      onClick={handleClassify}
-      sx={{ width: 'fit-content', mb: 2 }}  // Ensure button has margin below it
-      disabled={!directory || loading}  // Disable if no directory selected or during loading
-    >
-      {loading ? <CircularProgress size={24} /> : 'Classify Files'}
-    </Button>
-  </Box>
+        {/* Classify Button - Disabled until directory is selected */}
+        <button
+          className={`px-4 py-2 rounded ${!directory || loading ? 'bg-gray-400' : 'bg-green-500'} text-white`}
+          onClick={handleClassify}
+          disabled={!directory || loading}
+        >
+          {loading ? <CircularProgress size={24} /> : 'Classify Files'}
+        </button>
+      </div>
 
-  {/* Display Snackbar for notifications */}
-  <Snackbar open={openSnackbar} autoHideDuration={6000} onClose={handleSnackbarClose}>
-    <Alert onClose={handleSnackbarClose} severity="info" sx={{ width: '100%' }}>
-      {snackbarMessage}
-    </Alert>
-  </Snackbar>
+      {/* Display Snackbar for notifications */}
+      {openSnackbar && (
+        <div className="fixed bottom-4 left-4 bg-teal-200 text-black font-semibold px-4 py-2 rounded text-center">
+          <p>{snackbarMessage}</p>
+          <button onClick={handleSnackbarClose} className="font-bold text-red-600 text-center text-sm underline mt-2">
+            Close
+          </button>
+        </div>
+      )}
 
-  {/* Display Classified Files */}
-  {classifiedFiles && (
-    <Box sx={{ mt: 5 }}>
-      <Typography variant="h5" gutterBottom>
-        Classified Files
-      </Typography>
-      <Grid container spacing={2} justifyContent="center">
-        {Object.keys(classifiedFiles).map((category) => (
-          <Grid item xs={12} sm={6} md={4} key={category}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  {category}
-                </Typography>
-                <ul>
-                  {classifiedFiles[category].map((file, index) => (
-                    <li key={index}>
-                      <strong>File:</strong> {file.file} <br />
-                      <strong>MIME Type:</strong> {file.mime_type}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-    </Box>
-  )}
-</Box>
+      {/* Display Classified Files */}
+      {classifiedFiles && (
+        <div className="mt-10">
+          <h2 className=" text-center text-3xl font-bold mb-4">Classified Files</h2>
+          <div className="grid grid-cols-1 gap-8 justify-items-center">
+            {Object.keys(classifiedFiles).map((category) => (
+              <div key={category} className="w-8/12 bg-white shadow-md ">
+                <div className="flex rounded-md">
+                  {/* Category in teal box */}
+                  <div className="w-3/12 bg-teal-500 text-white flex items-center justify-center py-11 px-3 text-center rounded-l-lg">
+                    <h3 className="text-lg font-bold">{category}</h3>
+                  </div>
 
+                  <div className="ml-4 flex-1 py-7">
+                    <ul className="list-disc ml-6">
+                      {classifiedFiles[category].map((file, index) => (
+                        <li key={index} className="flex items-center">
+                          <FaFile className="mr-2" />
+                          <strong>File:</strong> {file.file} <br />
+                          {/* <strong>MIME Type:</strong> {file.mime_type} */}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+
+                </div>
+              </div>
+
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
