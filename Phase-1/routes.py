@@ -78,6 +78,29 @@ def classify_directory():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+@app.route('/classify-file', methods=['POST'])
+def classify_file():
+    try:
+        if 'file' not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
+        file = request.files['file']
+        extension = os.path.splitext(file.filename)[1]
+        mime_type = magic.Magic(mime=True).from_buffer(file.read(1024))  # Read the first 1KB of the file to get MIME
+
+        decision_tree, le_ext, le_mime, le_category = load_models()
+
+        predicted_category = predict_category(decision_tree, le_ext, le_mime, le_category, extension, mime_type)
+
+        return jsonify({
+            "file": file.filename,
+            "extension": extension,
+            "mime_type": mime_type,
+            "predicted_category": predicted_category
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
