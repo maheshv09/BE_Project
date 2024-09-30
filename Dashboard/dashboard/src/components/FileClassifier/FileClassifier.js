@@ -43,7 +43,7 @@ const FileClassifier = () => {
     });
 
     try {
-      const response = await fetch('http://localhost:5000/classify-dir', {
+      const response = await fetch('http://127.0.0.1:5000/classify-dir', {
         method: 'POST',
         body: formData,
       });
@@ -164,31 +164,36 @@ const FileClassifier = () => {
 
       {/* Display Classified Files */}
       {classifiedFiles && (
-        <div className="mt-10">
-          <h2 className="text-center text-3xl font-bold mb-4">Classified Files</h2>
-          <div className="grid grid-cols-1 gap-8 justify-items-center">
-            {Object.keys(classifiedFiles).map((category) => (
-              <div key={category} className="w-8/12 bg-white shadow-md">
-                <div className="flex rounded-md">
-                  <div className="w-3/12 bg-teal-500 text-white flex items-center justify-center py-11 px-3 text-center rounded-l-lg">
-                    <h3 className="text-lg font-bold">{category}</h3>
-                  </div>
-                  <div className="ml-4 flex-1 py-7">
-                    <ul className="list-disc ml-6">
-                      {classifiedFiles[category].map((file, index) => (
-                        <li key={index} className="flex items-center">
-                          <FaFile className="mr-2" />
-                          <strong>File:</strong> {file.file}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
+  <div className="mt-10">
+    <h2 className="text-center text-3xl font-bold mb-4">Classified Files</h2>
+    <div className="grid grid-cols-1 gap-8 justify-items-center">
+      {Object.keys(classifiedFiles).map((category) => {
+        const displayCategory = category.includes('Prediction error') || !category ? 'Unknown' : category;
+        return (
+          <div key={category} className="w-8/12 bg-white shadow-md">
+            <div className="flex rounded-md">
+              <div className="w-3/12 bg-teal-500 text-white flex items-center justify-center py-11 px-3 text-center rounded-l-lg">
+                <h3 className="text-lg font-bold">{displayCategory}</h3>
               </div>
-            ))}
+              <div className="ml-4 flex-1 py-7">
+                <ul className="list-disc ml-6">
+                  {classifiedFiles[category].map((file, index) => (
+                    <li key={index} className="flex items-center">
+                      <FaFile className="mr-2" />
+                      <strong> File : </strong> {file.file}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })}
+    </div>
+  </div>
+)}
+
+
     </div>
   );
 };

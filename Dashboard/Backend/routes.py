@@ -44,9 +44,10 @@ def predict_category(decision_tree, le_ext, le_mime, le_category, extension, mim
 @app.route('/classify-dir', methods=['POST'])
 def classify_directory():
     try:
+        # print("api")
         # Load models
         decision_tree, le_ext, le_mime, le_category = load_models()
-        
+        # print("file")
         # Check if files are present in the request
         if 'files' not in request.files:
             return jsonify({"error": "No files uploaded"}), 400
@@ -55,6 +56,7 @@ def classify_directory():
         classified_files = {}
 
         # Process each file
+        print("for")
         for file in files:
             file_path = file.filename
             extension = os.path.splitext(file_path)[1]  # Extract the file extension
