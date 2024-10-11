@@ -3,4 +3,15 @@
     "operation": "deletion",
     "timestamp": "2024-10-11 20:09:12.079920",
     "category": "Unknown"
+}{
+    "file": "E:/App.css",
+    "operation": "insertion",
+    "timestamp": "2024-10-11 20:18:05.410518",
+    "category": "Configuration file"
+}{
+    "file": "E:/abc.txt",
+    "operation": "update",
+    "timestamp": "2024-10-11 21:24:37.337527",
+    "category": "Documents",
+    "bytes_modified": 4347200
 }

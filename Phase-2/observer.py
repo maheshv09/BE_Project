@@ -7,7 +7,12 @@ import datetime
 import pickle
 import magic
 
-log_file = "file_operations_log.json"
+# Function to create a log file name based on the drive
+def get_log_file_for_drive(file_path):
+    drive = os.path.splitdrive(file_path)[0]
+    log_file_name = f"{drive.replace(':', '')}_drive_operations_log.json"
+    return log_file_name
+
 category_cache = {}  # Cache to store file categories on creation/update
 file_size_cache = {}  # Cache to store file sizes before modification
 last_logged_event = {}  # Cache to store the last modification event
@@ -57,9 +62,14 @@ class Categorizer:
 class FileHandler(FileSystemEventHandler):
     def __init__(self, categorizer):
         super().__init__()
-        self.categorizer = categorizer  # Use categorizer from Phase 1
+        self.categorizer = categorizer
 
     def process_event(self, event_type, file_path, bytes_modified=None):
+        # Skip logging for files in the Recycle Bin
+        if "$RECYCLE.BIN" in file_path:
+            print(f"Skipping logging for Recycle Bin file: {file_path}")
+            return
+
         log_entry = {
             "file": file_path,
             "operation": event_type,
@@ -71,24 +81,31 @@ class FileHandler(FileSystemEventHandler):
                 file_category = self.categorizer.categorize(file_path)
                 category_cache[file_path] = file_category
                 log_entry["category"] = file_category
-                
+
                 if event_type == "update" and bytes_modified is not None:
                     log_entry["bytes_modified"] = bytes_modified
-                
+
                 file_size_cache[file_path] = os.path.getsize(file_path)
 
         elif event_type == "deletion":
+            # Retrieve the file category from cache on deletion
             file_category = category_cache.get(file_path, "Unknown")
             log_entry["category"] = file_category
+            
             if file_path in category_cache:
                 del category_cache[file_path]
             if file_path in file_size_cache:
                 del file_size_cache[file_path]
 
+        # Determine the log file for the drive the file belongs to
+        log_file = get_log_file_for_drive(file_path)
+
+        # Append log entry to the drive-specific log file
         with open(log_file, "a") as log:
             log.write(json.dumps(log_entry) + "\n")
-        
-        print(f"Logged: {log_entry}")  # Print to console for monitoring
+
+        print(f"Logged: {log_entry} to {log_file}")  # Print to console for monitoring
+
 
     def on_created(self, event):
         if not event.is_directory:
@@ -98,47 +115,40 @@ class FileHandler(FileSystemEventHandler):
     def on_modified(self, event):
         if not event.is_directory:
             try:
-                # Introduce a slight delay to ensure file write is complete
-                time.sleep(0.1)
+                # Introduce a delay to allow time for the file write to complete
+                time.sleep(0.5)
 
                 # Get the current file size after modification
                 current_size = os.path.getsize(event.src_path)
 
-                # Retrieve previous file size from cache (if it exists)
-                previous_size = file_size_cache.get(event.src_path, current_size)
+                # Retrieve previous file size from cache; default to current_size if not found
+                previous_size = file_size_cache.get(event.src_path)
+
+                # If previous size is None (first modification), initialize it
+                if previous_size is None:
+                    previous_size = current_size
+                    file_size_cache[event.src_path] = previous_size  # Cache the initial size
 
                 # Calculate bytes modified
                 bytes_modified = current_size - previous_size
 
-                # Filter out modification events that have 0-byte changes and skip metadata updates
+                # Debug output for clarity
+                print(f"CURR: {current_size} / Previous Size: {previous_size} / Bytes Modified: {bytes_modified}")
+
+                # If no bytes were modified, skip logging
                 if bytes_modified == 0:
-                    # If the size didn't change and the file is already in the cache, skip logging
-                    print(f"Skipping logging for {event.src_path}: 0 bytes modified (metadata or access time changed).")
+                    print(f"Skipping logging for {event.src_path}: 0 bytes modified (possible metadata change).")
                     return
 
-                # Check if this modification is meaningful or a duplicate
-                last_event = last_logged_event.get(event.src_path)
-                if last_event and last_event["timestamp"] + datetime.timedelta(seconds=1) > datetime.datetime.now() and bytes_modified == 0:
-                    return  # Skip logging if the event is a duplicate with 0-byte changes
-
-                # Log the event and update last_logged_event
+                # Log the update event with bytes modified
                 self.process_event("update", event.src_path, bytes_modified=bytes_modified)
-                last_logged_event[event.src_path] = {
-                    "timestamp": datetime.datetime.now(),
-                    "bytes_modified": bytes_modified
-                }
 
-                # Update the cache with the new size
+                # Update the cache with the new size after logging the change
                 file_size_cache[event.src_path] = current_size
 
             except FileNotFoundError:
-                # If the file was deleted before getting its size, skip the modification
                 print(f"File not found: {event.src_path}, likely deleted.")
 
-
-    def on_deleted(self, event):
-        if not event.is_directory:
-            self.process_event("deletion", event.src_path)
 
 def monitor_directory(directory_to_monitor, categorizer):
     event_handler = FileHandler(categorizer)
@@ -156,5 +166,7 @@ def monitor_directory(directory_to_monitor, categorizer):
 # ---- START MONITORING ---- #
 if __name__ == '__main__':
     categorizer = Categorizer()
+
+    # Example: Monitor the F:/ directory or change this to any path
     directory_to_monitor = 'E:/'
     monitor_directory(directory_to_monitor, categorizer)

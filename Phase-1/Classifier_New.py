@@ -86,3 +86,7 @@ with open('le_mime.pkl', 'wb') as mime_file:
 
 with open('le_category.pkl', 'wb') as category_file:
     pickle.dump(le_category, category_file)
+1
+2
+3
+45

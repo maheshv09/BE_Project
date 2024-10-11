@@ -61,3 +61,4 @@ def predict_new_extension(extension):
 new_extension = 'mp3'  
 predict_new_extension(new_extension)
 
+asx

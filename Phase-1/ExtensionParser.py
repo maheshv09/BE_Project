@@ -20,3 +20,5 @@ with open('mime_extensions.csv', 'w', newline='') as csvfile:
 
     for file_type, extensions in mime_extensions.items():
         writer.writerow([file_type, extensions])
+
+
