@@ -54,6 +54,11 @@ class Categorizer:
     def categorize(self, file_path):
         extension = os.path.splitext(file_path)[1]
         mime_type = magic.Magic(mime=True).from_file(file_path)
+
+        # Handle empty files with the MIME type 'inode/x-empty'
+        if mime_type == 'inode/x-empty':
+            return "Empty File"
+        
         return predict_category(self.decision_tree, self.le_ext, self.le_mime, self.le_category, extension, mime_type)
 
 # ---- CATEGORIZER CODE END ---- #
@@ -97,6 +102,11 @@ class FileHandler(FileSystemEventHandler):
             if file_path in file_size_cache:
                 del file_size_cache[file_path]
 
+        elif event_type == "rename":
+            # Handle file renaming events
+            log_entry["new_name"] = file_path
+            log_entry["category"] = category_cache.get(file_path, "Unknown")
+
         # Determine the log file for the drive the file belongs to
         log_file = get_log_file_for_drive(file_path)
 
@@ -116,7 +126,7 @@ class FileHandler(FileSystemEventHandler):
         if not event.is_directory:
             try:
                 # Introduce a delay to allow time for the file write to complete
-                time.sleep(0.5)
+                time.sleep(0.0001)
 
                 # Get the current file size after modification
                 current_size = os.path.getsize(event.src_path)
@@ -148,6 +158,17 @@ class FileHandler(FileSystemEventHandler):
 
             except FileNotFoundError:
                 print(f"File not found: {event.src_path}, likely deleted.")
+
+    # Method to handle deletions
+    def on_deleted(self, event):
+        if not event.is_directory:
+            self.process_event("deletion", event.src_path)
+
+    # Method to handle renaming of files
+    def on_moved(self, event):
+        if not event.is_directory:
+            print(f"File moved from {event.src_path} to {event.dest_path}")
+            self.process_event("rename", event.dest_path)
 
 
 def monitor_directory(directory_to_monitor, categorizer):
