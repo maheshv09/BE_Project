@@ -10,6 +10,8 @@ const FileClassifier = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [directory, setDirectory] = useState(null);
   const [isDirectoryMode, setIsDirectoryMode] = useState(true); // State to toggle between Directory and File selection
+  const [cacheData, setCacheData] = useState(null); // State for storing cache data
+
 
   const handleDirectoryChange = (event) => {
     const files = event.target.files;
@@ -48,11 +50,17 @@ const FileClassifier = () => {
         body: formData,
       });
 
+      console.log("Respone: ", response);
+
       if (!response.ok) {
-        throw new Error('Network response was not ok');
+        const errorData = await response.json();
+        setSnackbarMessage(errorData.message || 'Network response was not ok');      
+        setOpenSnackbar(true);
+        return;
       }
 
       const data = await response.json();
+      console.log("Data: ", data);
       console.log('Classification Result:', data);
       setClassifiedFiles(data);
       setSnackbarMessage('Files classified successfully!');
@@ -68,6 +76,20 @@ const FileClassifier = () => {
 
   const handleSnackbarClose = () => {
     setOpenSnackbar(false);
+  };
+
+  // Fetch cache data
+  const handleFetchCache = async () => {
+    try {
+      const response = await fetch('http://127.0.0.1:5000/display-cache'); // Assuming this is your cache endpoint
+      const data = await response.json();
+      console.log('Cache Data:', data);
+      setCacheData(data.cache_data); // Assuming 'cache_data' is the key in your response
+    } catch (error) {
+      console.error('Error fetching cache data:', error);
+      setSnackbarMessage('Error fetching cache data.');
+      setOpenSnackbar(true);
+    }
   };
 
   return (
@@ -152,6 +174,8 @@ const FileClassifier = () => {
         </button>
       </div>
 
+      
+
       {/* Snackbar for notifications */}
       {openSnackbar && (
         <div className="fixed bottom-4 left-4 bg-teal-200 text-black font-semibold px-4 py-2 rounded text-center">
@@ -193,6 +217,14 @@ const FileClassifier = () => {
   </div>
 )}
 
+    <div className="mt-6 flex justify-center">
+        <button
+          className="bg-blue-500 text-white px-4 py-2 rounded"
+          onClick={handleFetchCache}
+        >
+          Fetch Cache Data
+        </button>
+      </div>
 
     </div>
   );
