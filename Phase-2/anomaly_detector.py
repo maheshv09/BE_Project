@@ -1,111 +1,82 @@
+from river import anomaly
+from river import stats
+from datetime import datetime
 import json
-from datetime import datetime, timedelta
-from collections import defaultdict
-import os
-
-# Path to the logs file (adjust this path as necessary)
-log_file_path = 'F:/mahesh/BE Project/Phase-2/E_drive_operations_log.json'
-
-# Define time periods for analysis (e.g., weekly or monthly)
-time_period = timedelta(weeks=1)  # Weekly analysis
-threshold_multiplier = 5  # Anomaly threshold (e.g., 5 times the average activity)
 
 def read_logs(file_path):
-    logs = []
     with open(file_path, 'r') as f:
-        data = f.read()
-        # Split the data by '}{' and then handle each as an individual JSON entry
-        log_entries = data.split('}{')
-        
-        for i, entry in enumerate(log_entries):
-            # Ensure each log is a complete JSON object by adding back '{' and '}'
-            if i == 0:
-                entry = entry + '}'
-            elif i == len(log_entries) - 1:
-                entry = '{' + entry
-            else:
-                entry = '{' + entry + '}'
-
-            # Convert each entry to a JSON object and append to logs
-            logs.append(json.loads(entry))
-
+        try:
+            logs = json.load(f)  # Load the entire JSON array
+        except json.JSONDecodeError as e:
+            print(f"Error loading JSON array from file: {e}")
+            logs = []  # Return an empty list if there's an error
     return logs
 
+# Function to convert logs into features for online learning
+category_map = {}
+operation_map = {}
+last_timestamp = {}
 
-# Function to parse logs and categorize them by operation type and category over time
-def parse_logs(logs):
-    # Store frequency of operations by category and date
-    operation_frequencies = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
+# Function to convert log entries into numerical features for model input
+def log_to_features(log_entry):
+    # Existing feature extraction...
+    category = log_entry.get("category", "Unknown")
+    if category not in category_map:
+        category_map[category] = len(category_map)
+    category_code = category_map[category]
 
-    for log_entry in logs:
-        file_category = log_entry.get("category", "Unknown")
-        operation = log_entry.get("operation", "Unknown")
-        timestamp = log_entry.get("timestamp", None)
+    operation = log_entry.get("operation", "Unknown")
+    if operation not in operation_map:
+        operation_map[operation] = len(operation_map)
+    operation_code = operation_map[operation]
 
-        # Convert timestamp to datetime object
-        if timestamp:
-            log_time = datetime.fromisoformat(timestamp)
-            # Group by day for now (you can adjust this to week, month, etc.)
-            log_date = log_time.date()
-            operation_frequencies[file_category][operation][log_date] += 1
+    bytes_modified = log_entry.get("bytes_modified", 0)
+    timestamp = datetime.fromisoformat(log_entry.get("timestamp"))
 
-    return operation_frequencies
+    # Calculate time difference (in seconds) from the last entry for the same file
+    file_path = log_entry.get("file")
+    time_diff = 0
+    if file_path in last_timestamp:
+        time_diff = (timestamp - last_timestamp[file_path]).total_seconds()
+    last_timestamp[file_path] = timestamp  # Update last seen timestamp
 
-# Function to calculate average frequencies and detect anomalies
-def detect_anomalies(operation_frequencies, threshold_multiplier=5):
+    # Return feature dictionary with time difference included
+    return {
+        'category_code': category_code,
+        'operation_code': operation_code,
+        'bytes_modified': float(bytes_modified),
+        'hour': timestamp.hour,
+        'time_diff': time_diff  # New feature
+    }
+# Initialize Isolation Forest for online anomaly detection
+model = anomaly.HalfSpaceTrees(seed=42, n_trees=10, height=5, window_size=50)
+
+# Function to detect anomalies using online learning
+def detect_anomalies(logs, model):
     anomalies = []
 
-    for category, operations in operation_frequencies.items():
-        for operation, daily_frequencies in operations.items():
-            # Calculate the average frequency over time
-            total_operations = sum(daily_frequencies.values())
-            days_tracked = len(daily_frequencies)
-            if days_tracked == 0:
-                continue
-            avg_frequency = total_operations / days_tracked
+    for log_entry in logs:
+        features = log_to_features(log_entry)
+        #print("FEATURES:", features)
+        # Score anomaly (scores closer to 1 mean high anomaly)
+        anomaly_score = model.score_one(features)
+        #print("ANOMALY SCORE:", anomaly_score)
+        # Train model with the new data (no need to reassign `model`)
+        model.learn_one(features)
 
-            # Check for anomalies by comparing daily frequencies to the average
-            for date, frequency in daily_frequencies.items():
-                if frequency > threshold_multiplier * avg_frequency:
-                    anomalies.append({
-                        "category": category,
-                        "operation": operation,
-                        "date": str(date),
-                        "frequency": frequency,
-                        "average_frequency": avg_frequency,
-                        "anomaly_factor": frequency / avg_frequency
-                    })
+        # Thresholding (use an empirical threshold or dynamically adjust based on anomaly history)
+        if anomaly_score > 0.9:  # Example threshold
+            anomalies.append({
+                "log": log_entry,
+                "anomaly_score": anomaly_score
+            })
 
     return anomalies
-
-# Function to print detected anomalies
-def print_anomalies(anomalies):
-    if not anomalies:
-        print("No anomalies detected.")
-        return
-    
-    print("Anomalies Detected:")
-    for anomaly in anomalies:
-        print(f"Category: {anomaly['category']}, Operation: {anomaly['operation']}")
-        print(f"Date: {anomaly['date']}, Frequency: {anomaly['frequency']}")
-        print(f"Average Frequency: {anomaly['average_frequency']:.2f}")
-        print(f"Anomaly Factor: {anomaly['anomaly_factor']:.2f}x")
-        print("-" * 40)
-
-# Main function to run anomaly detection
-def run_anomaly_detection(log_file_path, threshold_multiplier=5):
-    # Read the logs from file
-    logs = read_logs(log_file_path)
-
-    # Parse the logs to get operation frequencies
-    operation_frequencies = parse_logs(logs)
-
-    # Detect anomalies
-    anomalies = detect_anomalies(operation_frequencies, threshold_multiplier)
-
-    # Print the results
-    print_anomalies(anomalies)
-
-# Run the anomaly detection on the provided log file
-if __name__ == "__main__":
-    run_anomaly_detection(log_file_path, threshold_multiplier)
+# Example usage
+log_file_path = 'F:\mahesh\BE Project\synthetic_log_file.json'
+logs = read_logs(log_file_path)
+anomalies = detect_anomalies(logs, model)
+print("ANOMALIES: " , anomalies)
+# Print anomalies detected
+for anomaly in anomalies:
+    print(f"Anomaly detected with score {anomaly['anomaly_score']}: {anomaly['log']}")
