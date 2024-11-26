@@ -2,6 +2,16 @@ from river import anomaly
 from river import stats
 from datetime import datetime
 import json
+from datetime import datetime, timedelta
+from collections import defaultdict
+import os
+
+# Path to the logs file (adjust this path as necessary)
+log_file_path = 'E_drive_operations_log.json'
+
+# Define time periods for analysis (e.g., weekly or monthly)
+time_period = timedelta(weeks=1)  # Weekly analysis
+threshold_multiplier = 5  # Anomaly threshold (e.g., 5 times the average activity)
 
 def read_logs(file_path):
     with open(file_path, 'r') as f:
