@@ -148,7 +148,7 @@ def evaluate_anomalies(all_anomalies):
     return counts
 
 # Example usage
-log_file_path = 'F:/mahesh/BE Project/synthetic_log_file.json'
+log_file_path = '../synthetic_log_file.json'
 logs = read_logs(log_file_path)
 
 # Prepare dataset for batch models

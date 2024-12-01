@@ -83,7 +83,7 @@ def detect_anomalies(logs, model):
 
     return anomalies
 # Example usage
-log_file_path = 'F:\mahesh\BE Project\synthetic_log_file.json'
+log_file_path = '../synthetic_log_file.json'
 logs = read_logs(log_file_path)
 anomalies = detect_anomalies(logs, model)
 print("ANOMALIES: " , anomalies)
