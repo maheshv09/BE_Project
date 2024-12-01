@@ -198,6 +198,7 @@ def detect_anomalies_with_scores(data):
     return scores, predictions, anomaly_counts
 
 
+
 import numpy as np
 
 def combine_anomaly_scores(scores, weights, threshold=0.5):
@@ -266,6 +267,13 @@ for model, metric_values in metrics.items():
         print(f"  {metric}: {value:.2f}")
     print()
 
+def filter_logs_by_operation(logs, operation_type):
+    """
+    Filters logs based on the given operation type.
+    """
+    return [log for log in logs if log['operation'] == operation_type]
+
+
 def save_anomalies(logs, predictions, file_path="anomalies.json"):
     """
     Saves all anomalies across models to a single JSON file.
@@ -284,4 +292,58 @@ def save_anomalies(logs, predictions, file_path="anomalies.json"):
 
 # Save anomalies for all models to one file
 save_anomalies(logs, predictions, "anomalies.json")
+
+
+# ---------------------------------------------------------------------
+
+# ANOMALY DETECTION FOR EACH OPERATION 
+
+
+def save_anomalies_by_operation(anomalies_by_operation, file_path="anomalies_by_operation.json"):
+    """
+    Saves anomalies grouped by operation type to a JSON file.
+    """
+    with open(file_path, 'w') as f:
+        json.dump(anomalies_by_operation, f, indent=4)
+    print(f"Saved anomalies by operation to {file_path}")
+
+def filter_logs_by_operation(logs, operation_type):
+    """
+    Filters logs for the given operation type.
+    """
+    return [log for log in logs if log['operation'] == operation_type]
+
+operation_types = ["deletion", "insertion", "rename", "update"]
+anomalies_by_operation = {}
+
+for operation in operation_types:
+    print(f"\nProcessing operation: {operation}")
+        
+        # Filter logs for the current operation
+    filtered_logs = filter_logs_by_operation(logs, operation)
+    if not filtered_logs:
+       print(f"No logs found for operation: {operation}")
+       continue
+
+        # Extract features and labels
+    features, labels = extract_features_from_log(filtered_logs)
+
+        # Detect anomalies
+    scores, predictions, anomaly_count = detect_anomalies_with_scores(features)
+
+        # Evaluate performance
+    metrics = evaluate_model_predictions(predictions, logs, scores)
+
+        # Save results
+    anomalies_by_operation[operation] = {
+            "anomaly_count": anomaly_count,
+            "scores": scores,
+            "predictions": predictions,
+            "metrics": metrics,
+        }
+
+    print(f"Anomalies detected for {operation}: {anomaly_count}")
+    print(f"Metrics: {metrics}")
+
+    save_anomalies_by_operation(anomalies_by_operation)
 
