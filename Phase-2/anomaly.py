@@ -298,52 +298,64 @@ save_anomalies(logs, predictions, "anomalies.json")
 
 # ANOMALY DETECTION FOR EACH OPERATION 
 
-
-def save_anomalies_by_operation(anomalies_by_operation, file_path="anomalies_by_operation.json"):
-    """
-    Saves anomalies grouped by operation type to a JSON file.
-    """
-    with open(file_path, 'w') as f:
-        json.dump(anomalies_by_operation, f, indent=4)
-    print(f"Saved anomalies by operation to {file_path}")
-
 def filter_logs_by_operation(logs, operation_type):
     """
     Filters logs for the given operation type.
     """
     return [log for log in logs if log['operation'] == operation_type]
 
+import json
+
 operation_types = ["deletion", "insertion", "rename", "update"]
 anomalies_by_operation = {}
 
 for operation in operation_types:
     print(f"\nProcessing operation: {operation}")
-        
-        # Filter logs for the current operation
-    filtered_logs = filter_logs_by_operation(logs, operation)
-    if not filtered_logs:
-       print(f"No logs found for operation: {operation}")
-       continue
 
-        # Extract features and labels
+    # Filter logs for the current operation
+    filtered_logs = filter_logs_by_operation(logs, operation)
+
+    if not filtered_logs:
+        print(f"No logs found for operation: {operation}")
+        # Include the operation with zero anomalies and empty logs
+        anomalies_by_operation[operation] = {
+            "anomaly_count": 0,
+            "logs": [],
+        }
+        continue
+
+    # Extract features and labels
     features, labels = extract_features_from_log(filtered_logs)
 
-        # Detect anomalies
-    scores, predictions, anomaly_count = detect_anomalies_with_scores(features)
+    # Detect anomalies
+    scores, o_predictions, anomaly_count = detect_anomalies_with_scores(features)
 
-        # Evaluate performance
-    metrics = evaluate_model_predictions(predictions, logs, scores)
+    # Debug: Check anomaly_count structure
+    print(f"Debug - anomaly_count for {operation}: {anomaly_count}")
 
-        # Save results
+    # Save only anomaly count and logs for the current operation
     anomalies_by_operation[operation] = {
-            "anomaly_count": anomaly_count,
-            "scores": scores,
-            "predictions": predictions,
-            "metrics": metrics,
-        }
+        "anomaly_count": anomaly_count,
+        "logs": filtered_logs,
+    }
 
     print(f"Anomalies detected for {operation}: {anomaly_count}")
-    print(f"Metrics: {metrics}")
 
-    save_anomalies_by_operation(anomalies_by_operation)
+# Save anomalies_by_operation to a JSON file
+output_file = "anomalies_by_operation.json"
+
+# Convert all NumPy types to native Python types
+def convert_to_serializable(obj):
+    if isinstance(obj, (np.integer, np.int64)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, np.float64)):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+
+with open(output_file, 'w') as f:
+    json.dump(anomalies_by_operation, f, indent=4, default=convert_to_serializable)
+
+print(f"Anomalies by operation saved to {output_file}")
 
